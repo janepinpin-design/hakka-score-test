@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      const audioFile = files.file?. || files.file;
+      const audioFile = files.file?.[0] || files.file;
       const pinyin = Array.isArray(fields.pinyin) ? fields.pinyin : fields.pinyin;
       const accentId = Array.isArray(fields.accent_id) ? fields.accent_id : (fields.accent_id || '1');
       const text = Array.isArray(fields.text) ? fields.text : fields.text || '';
