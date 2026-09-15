@@ -1,0 +1,1 @@
+# hakka-score-test
