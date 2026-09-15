@@ -23,7 +23,7 @@ function segmentArticle(text, pinyin) {
 
   sentences.forEach((sentence, idx) => {
     // 計算該句漢字數量（扣除標點符號）
-    const charCount = sentence.replace(/[。！？，、]/g, '').length;
+    const charCount = [...sentence.replace(/[。！？，、]/g, '')].length;
     const segmentPinyinSlice = pinyinWords.slice(pinyinIndex, pinyinIndex + charCount);
     pinyinIndex += charCount;
 
