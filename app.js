@@ -65,15 +65,29 @@ function renderSegments() {
   });
 }
 
-// 5. 開始錄音控制
+// 5. 開始錄音控制（改用 Web Audio API 以產生正確格式的 WAV）
+let audioContext;
+let scriptProcessor;
+let audioInput;
+let recordedSamples = [];
+let currentStream;
+
 async function startRecording(index) {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
+    currentStream = stream;
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioInput = audioContext.createMediaStreamSource(stream);
+    scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+    recordedSamples = [];
 
-    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-    mediaRecorder.start();
+    scriptProcessor.onaudioprocess = (e) => {
+      const channelData = e.inputBuffer.getChannelData(0);
+      recordedSamples.push(new Float32Array(channelData));
+    };
+
+    audioInput.connect(scriptProcessor);
+    scriptProcessor.connect(audioContext.destination);
 
     document.getElementById(`btn-rec-${index}`).disabled = true;
     document.getElementById(`btn-stop-${index}`).disabled = false;
@@ -83,27 +97,108 @@ async function startRecording(index) {
   }
 }
 
-// 6. 停止錄音並送出評分
+// 6. 停止錄音並送出評分（轉換為 Mono / 16kHz / 16bit PCM 的 WAV）
 async function stopRecording(index) {
-  mediaRecorder.stop();
-  mediaRecorder.onstop = async () => {
-    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-    document.getElementById(`btn-stop-${index}`).disabled = true;
-    document.getElementById(`score-badge-${index}`).innerText = "評分中...";
+  scriptProcessor.disconnect();
+  audioInput.disconnect();
+  currentStream.getTracks().forEach(track => track.stop());
+  const inputSampleRate = audioContext.sampleRate;
 
-    // 呼叫後端 API
-    const score = await submitSegmentScore(audioBlob, segments[index]);
-    segments[index].score = score;
+  document.getElementById(`btn-stop-${index}`).disabled = true;
+  document.getElementById(`score-badge-${index}`).innerText = "評分中...";
 
-    // 更新介面得分顯示
-    const badge = document.getElementById(`score-badge-${index}`);
-    badge.innerText = `得分：${score} 分`;
-    badge.className = `score-badge ${score >= 80 ? 'score-high' : 'score-low'}`;
-    document.getElementById(`btn-rec-${index}`).disabled = false;
+  const wavBlob = encodeWAV(recordedSamples, inputSampleRate, 16000);
 
-    // 重新計算全篇總分
-    calculateTotalScore();
-  };
+  const score = await submitSegmentScore(wavBlob, segments[index]);
+  segments[index].score = score;
+
+  const badge = document.getElementById(`score-badge-${index}`);
+  badge.innerText = `得分：${score} 分`;
+  badge.className = `score-badge ${score >= 80 ? 'score-high' : 'score-low'}`;
+  document.getElementById(`btn-rec-${index}`).disabled = false;
+
+  calculateTotalScore();
+}
+
+// 6a. 將錄音樣本合併、降頻取樣、轉為 16bit PCM，並組裝成合法 WAV 檔
+function encodeWAV(samplesArray, inputSampleRate, targetSampleRate) {
+  let totalLength = 0;
+  samplesArray.forEach(chunk => totalLength += chunk.length);
+  const merged = new Float32Array(totalLength);
+  let offset = 0;
+  samplesArray.forEach(chunk => {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  });
+
+  const downsampled = downsampleBuffer(merged, inputSampleRate, targetSampleRate);
+  const pcmData = floatTo16BitPCM(downsampled);
+  return createWavBlob(pcmData, targetSampleRate);
+}
+
+function downsampleBuffer(buffer, inputSampleRate, targetSampleRate) {
+  if (targetSampleRate === inputSampleRate) return buffer;
+  const ratio = inputSampleRate / targetSampleRate;
+  const newLength = Math.round(buffer.length / ratio);
+  const result = new Float32Array(newLength);
+  let offsetResult = 0;
+  let offsetBuffer = 0;
+  while (offsetResult < newLength) {
+    const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+    let accum = 0, count = 0;
+    for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+      accum += buffer[i];
+      count++;
+    }
+    result[offsetResult] = count > 0 ? accum / count : 0;
+    offsetResult++;
+    offsetBuffer = nextOffsetBuffer;
+  }
+  return result;
+}
+
+function floatTo16BitPCM(input) {
+  const output = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i++) {
+    let s = Math.max(-1, Math.min(1, input[i]));
+    output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return output;
+}
+
+function createWavBlob(pcmData, sampleRate) {
+  const numChannels = 1;
+  const bytesPerSample = 2;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = pcmData.length * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < pcmData.length; i++, offset += 2) {
+    view.setInt16(offset, pcmData[i], true);
+  }
+
+  return new Blob([view], { type: 'audio/wav' });
 }
 
 // 7. 發送單句資料給後端 API
