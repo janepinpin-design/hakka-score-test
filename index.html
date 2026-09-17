@@ -3,33 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>客語長文分句朗讀評測系統</title>
+  <title>客語詩詞朗讀評測系統</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 15px; color: #333; }
-    .segment-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .segment-text { font-size: 1.25rem; font-weight: bold; color: #1a202c; }
-    .segment-pinyin { color: #718096; font-size: 0.95rem; margin: 6px 0 12px 0; }
-    .score-badge { font-weight: bold; padding: 6px 12px; border-radius: 20px; background: #edf2f7; color: #4a5568; font-size: 0.9rem; }
+    .poem-block { margin-bottom: 32px; }
+    .poem-text { font-size: 1.25rem; font-weight: bold; color: #1a202c; line-height: 1.8; }
+    .poem-pinyin { color: #718096; font-size: 0.9rem; margin-top: 8px; line-height: 1.6; }
+    .control-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center; }
+    .score-badge { font-weight: bold; padding: 6px 12px; border-radius: 20px; background: #edf2f7; color: #4a5568; font-size: 0.9rem; margin-left: 8px; }
     .score-high { background: #c6f6d5; color: #22543d; }
     .score-low { background: #fed7d7; color: #742a2a; }
-    button { cursor: pointer; padding: 8px 16px; margin-right: 8px; border: none; border-radius: 6px; background: #3182ce; color: white; font-weight: 500; }
+    button { cursor: pointer; padding: 10px 20px; margin-right: 8px; border: none; border-radius: 6px; background: #3182ce; color: white; font-weight: 500; font-size: 1rem; }
     button:disabled { background: #cbd5e0; cursor: not-allowed; }
     #summary-box { background: #ebf8ff; border: 1px solid #bee3f8; padding: 20px; border-radius: 8px; margin-top: 24px; text-align: center; }
   </style>
 </head>
 <body>
-  <h2>📖 客語長文分句朗讀評測系統</h2>
+  <h2>📖 客語詩詞朗讀評測系統</h2>
+  <p style="color:#718096;">請將以下三首詩，依序連續朗讀完畢後停止錄音，系統將針對整段錄音進行評分。</p>
 
-  <!-- 分句卡片動態渲染區 -->
-  <div id="segments-container"></div>
+  <div id="poems-container"></div>
 
-  <!-- 全篇結算區 -->
-  <div id="summary-box">
-    <h3 style="margin-top: 0;">📊 評測結果總覽</h3>
-    <p>全篇加權總分：<span id="total-score" style="font-size: 2.2rem; font-weight: bold; color: #2b6cb0;">--</span> 分</p>
+  <div class="control-box">
+    <button onclick="startRecording()" id="btn-rec">🎙️ 開始錄音</button>
+    <button onclick="stopRecording()" id="btn-stop" disabled>⏹️ 停止並評分</button>
+    <span class="score-badge" id="score-badge">未評分</span>
   </div>
 
-  <!-- 載入 JavaScript 邏輯 -->
+  <div id="summary-box" style="display:none;">
+    <h3 style="margin-top: 0;">📊 評測結果</h3>
+    <p>總分：<span id="total-score" style="font-size: 2.2rem; font-weight: bold; color: #2b6cb0;">--</span> 分</p>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
