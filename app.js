@@ -3,7 +3,7 @@
 // 1. 測試題庫資料：長文章、數字調拼音與腔調設定
 const articleData = {
   text: "為着自家个康健，𠊎兩老臨暗仔有去十八尖山行路个習慣。有一擺，看着盡多人拿等攝影機翕無停，𠊎乜行過去鬥鬧熱。",
-  pinyin: "ui55 zaag2 ci55 ga24 ge55 kong24 kien55 ngai11 liong31 lo31 lim11 am55 e31 iu31 hi55 siip2 bad2 ziam24 san24 hang11 lu55 ge55 xid2 guan55 iu31 it2 bai31 kon55 do31 cin55 do11 ngin11 na11 den31 sab2 iang31 gi24 hip2 mo11 thin11 ngai11 mied2 hang11 go55 hi55 deu55 nau55 ngid2",
+  pinyin: "ui55 do31 qid2 ga24 ge55 kong24 kien55 ngai11 liong31 lo31 lim11 am55 e31 iu24 hi55 siib5 bad2 jiam24 san24 hang11 lu55 ge55 xib5 guan55 iu24 id2 bai31 kon55 do31 qin55 do24 ngin11 na24 den31 ngiab2 iang31 gi24 hib2 mo11 tin11 ngai11 me55 hang11 go55 hi55 deu55 nau55 ngied5",
   accentId: "1" // 1: 四縣腔, 2: 海陸腔
 };
 
