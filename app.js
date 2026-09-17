@@ -43,6 +43,7 @@ let scriptProcessor;
 let audioInput;
 let recordedSamples = [];
 let currentStream;
+let recordingTimeout;
 
 async function startRecording() {
   try {
@@ -65,12 +66,20 @@ async function startRecording() {
     document.getElementById('btn-stop').disabled = false;
     document.getElementById('score-badge').innerText = "錄音中...";
     document.getElementById('score-badge').className = "score-badge";
+
+    // 一分鐘後自動停止錄音
+    recordingTimeout = setTimeout(() => {
+      if (!document.getElementById('btn-stop').disabled) {
+        stopRecording();
+      }
+    }, 60000);
   } catch (err) {
     alert("無法開啟麥克風，請確認權限設定！");
   }
 }
 
 async function stopRecording() {
+  clearTimeout(recordingTimeout);
   scriptProcessor.disconnect();
   audioInput.disconnect();
   currentStream.getTracks().forEach(track => track.stop());
@@ -131,18 +140,8 @@ function downsampleBuffer(buffer, inputSampleRate, targetSampleRate) {
   const ratio = inputSampleRate / targetSampleRate;
   const newLength = Math.round(buffer.length / ratio);
   const result = new Float32Array(newLength);
-  let offsetResult = 0;
-  let offsetBuffer = 0;
-  while (offsetResult < newLength) {
-    const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
-    let accum = 0, count = 0;
-    for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
-      accum += buffer[i];
-      count++;
-    }
-    result[offsetResult] = count > 0 ? accum / count : 0;
-    offsetResult++;
-    offsetBuffer = nextOffsetBuffer;
+  for (let i = 0; i < newLength; i++) {
+    result[i] = buffer[Math.floor(i * ratio)];
   }
   return result;
 }

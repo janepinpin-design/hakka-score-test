@@ -1,0 +1,2 @@
+file '1+2.wav'
+file '第3首.wav'
